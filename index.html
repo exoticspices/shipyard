@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shipyard — procedural low-poly spaceship generator</title>
+  <meta name="description" content="Generate game-ready low-poly spaceships from a seed, right in your browser. Six ship classes with distinct silhouettes, S/M/L tiers, liveries, fleet view, GLB + fleet .zip export. Every ship is CC0.">
+  <meta name="theme-color" content="#0d0e10">
+  <link rel="canonical" href="https://exoticspices.github.io/shipyard/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Shipyard">
+  <meta property="og:title" content="Shipyard — procedural low-poly spaceship generator">
+  <meta property="og:description" content="Six ship classes, deterministic seeds, S/M/L tiers, fleets, GLB export with UVs. Runs in your browser. CC0 outputs, MIT code.">
+  <meta property="og:url" content="https://exoticspices.github.io/shipyard/">
+  <meta property="og:image" content="https://exoticspices.github.io/shipyard/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Three procedurally generated low-poly corvettes at small, medium and large tiers">
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Shipyard — procedural low-poly spaceship generator">
+  <meta name="twitter:description" content="Seeded low-poly spaceships in your browser. Six classes, tiers, fleets, GLB export. CC0.">
+  <meta name="twitter:image" content="https://exoticspices.github.io/shipyard/og.png">
+  <meta name="twitter:image:alt" content="Three procedurally generated low-poly corvettes at small, medium and large tiers">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.png" type="image/png" sizes="64x64">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <main id="stage" aria-label="3D ship viewport">
+      <canvas id="view"></canvas>
+
+      <header class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 L25 27 L16 21.5 L7 27 Z"/></svg>
+        <div>
+          <h1>Shipyard</h1>
+          <p>Seeded low-poly spaceships &middot; GLB &middot; CC0</p>
+        </div>
+      </header>
+
+      <div class="viewbar" role="group" aria-label="View">
+        <div class="seg" id="viewSeg">
+          <button data-view="ship" title="Single ship (V)">Ship</button>
+          <button data-view="tiers" title="Same seed at S / M / L (V)">Tiers</button>
+          <button data-view="fleet" title="Nine sibling seeds (V)">Fleet</button>
+        </div>
+        <button class="chip" id="spinBtn" title="Auto-rotate (R)" aria-pressed="true">Spin</button>
+      </div>
+
+      <div class="readout" id="readout" aria-live="polite"></div>
+      <div class="hint" id="hint">drag to orbit &middot; scroll to zoom &middot; <kbd>Space</kbd> new ship</div>
+      <div class="loading" id="loading">Loading three.js&hellip;</div>
+    </main>
+
+    <aside id="panel">
+      <section>
+        <label class="lbl" for="seed">Seed</label>
+        <div class="seedrow">
+          <input id="seed" type="text" spellcheck="false" autocomplete="off" maxlength="40">
+          <button id="newBtn" class="primary" title="Roll a new seed (Space)">New ship <kbd>Space</kbd></button>
+        </div>
+      </section>
+
+      <section>
+        <div class="lbl">Class</div>
+        <div class="classes" id="classGrid"></div>
+      </section>
+
+      <section class="two">
+        <div>
+          <div class="lbl">Size tier <span class="k">T</span></div>
+          <div class="seg full" id="tierSeg">
+            <button data-tier="0">S</button><button data-tier="1">M</button><button data-tier="2">L</button>
+          </div>
+        </div>
+        <div class="sig">
+          <div class="lbl">Signature</div>
+          <div id="sigVal" class="mono">&mdash;</div>
+        </div>
+      </section>
+
+      <section>
+        <div class="lbl">Shape <button class="link" id="resetShape" title="Reset sliders">reset</button></div>
+        <div class="slider"><span>Length</span><input type="range" id="sLen" min="0.8" max="1.3" step="0.05"><output id="oLen"></output></div>
+        <div class="slider"><span>Detail</span><input type="range" id="sDetail" min="0" max="1" step="0.05"><output id="oDetail"></output></div>
+        <div class="slider"><span>Wings / rigs</span><input type="range" id="sAppend" min="0.7" max="1.4" step="0.05"><output id="oAppend"></output></div>
+      </section>
+
+      <section>
+        <div class="lbl">Livery <span class="k">L</span></div>
+        <div class="liveries" id="liveryList"></div>
+      </section>
+
+      <section>
+        <div class="lbl">Export</div>
+        <div class="exports">
+          <button id="glbBtn" class="wide">Download .glb</button>
+          <button id="zipBtn" class="wide2" title="All nine fleet siblings as GLBs in one .zip">Download fleet (.zip)</button>
+          <button id="pngBtn">Screenshot</button>
+          <button id="linkBtn">Copy link</button>
+        </div>
+        <p class="fine" id="exportNote">Meters, Y-up, nose +Z. One mesh &amp; material per channel, box-mapped UVs.</p>
+      </section>
+
+      <footer>
+        <p><strong>CC0</strong> &mdash; every ship you generate is yours. Code is MIT.</p>
+        <p class="keys"><kbd>Space</kbd> new <kbd>1</kbd>&ndash;<kbd>6</kbd> class <kbd>T</kbd> tier <kbd>L</kbd> livery <kbd>V</kbd> view</p>
+        <p><a href="https://github.com/exoticspices/shipyard" id="ghLink" target="_blank" rel="noopener">Source on GitHub</a></p>
+      </footer>
+    </aside>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
